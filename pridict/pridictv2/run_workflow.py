@@ -5,18 +5,18 @@ import torch
 from torch import nn
 import torch.multiprocessing as mp
 from tqdm import tqdm
-from .utilities import get_device, create_directory, ReaderWriter, dump_dict_content, \
+from pridict2.pridict.pridictv2.utilities import get_device, create_directory, ReaderWriter, dump_dict_content, \
                        perfmetric_report_cont, \
                        plot_loss, plot_xy, build_predictions_df,\
                        restrict_grad_, get_trainable_params,get_num_trainable_params,freeze_layers, \
                        perfmetric_report_multidata_cont
-from .model import AnnotEmbeder_InitSeq, AnnotEmbeder_MutSeq, SH_Attention, FeatureEmbAttention, \
+from pridict2.pridict.pridictv2.model import AnnotEmbeder_InitSeq, AnnotEmbeder_MutSeq, SH_Attention, FeatureEmbAttention, \
                    MLPEmbedder, MLPDecoder, MaskGenerator, MLPDecoderDistribution, init_params_
-from ..rnn.rnn import RNN_Net
+from pridict2.pridict.rnn.rnn import RNN_Net
 
-from .dataset import construct_load_dataloaders, construct_load_multiple_dataloaders, compute_correction_type_weight
-from .hyperparam import RNNHyperparamConfig,  get_hyperparam_options
-from .loss import CELoss, BalancedMSELoss
+from pridict2.pridict.pridictv2.dataset import construct_load_dataloaders, construct_load_multiple_dataloaders, compute_correction_type_weight
+from pridict2.pridict.pridictv2.hyperparam import RNNHyperparamConfig,  get_hyperparam_options
+from pridict2.pridict.pridictv2.loss import CELoss, BalancedMSELoss
 
 
 
@@ -1944,11 +1944,22 @@ def train_test_partition(datatensor_partition, config_map, tr_val_dir, run_gpu_m
     test_run(datatensor_partition, config_map, tr_val_dir, tr_val_dir, run_gpu_map, num_epochs=1)
     queue.put(gpu_index)
 
-def train_val_run(datatensor_partitions, config_map, train_val_dir, run_gpu_map, statedict_dir=None, num_epochs=20):
+def train_val_run(
+    datatensor_partitions,
+    config_map,
+    train_val_dir,
+    run_gpu_map,
+    statedict_dir=None,
+    num_epochs=20,
+    trainer_backend='legacy',
+):
     dsettypes = ['train', 'validation']
     mconfig, options = config_map
     options['num_epochs'] = num_epochs  # override number of epochs using user specified value
     options['train_flag'] = True
+    options['trainer_backend'] = trainer_backend
+    if trainer_backend == 'pytorch-lightning':
+        print('trainer_backend=pytorch-lightning requested; using compatible vendor training loop.')
 
     for run_num in datatensor_partitions:
         # update options run num to the current run

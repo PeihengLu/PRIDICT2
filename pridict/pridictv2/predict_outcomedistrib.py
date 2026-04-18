@@ -7,17 +7,17 @@ from torch.utils.data import DataLoader
 from matplotlib import pyplot as plt
 from tqdm import tqdm
 
-from .hyperparam import get_saved_config
-from .utilities import ReaderWriter, build_predictions_df, check_na,switch_layer_to_traineval_mode,require_nonleaf_grad
-from .data_preprocess import PESeqProcessor
-from .dataset import create_datatensor, MinMaxNormalizer
-from ..rnn.rnn import RNN_Net
+from pridict2.pridict.pridictv2.hyperparam import get_saved_config
+from pridict2.pridict.pridictv2.utilities import ReaderWriter, build_predictions_df, check_na,switch_layer_to_traineval_mode,require_nonleaf_grad
+from pridict2.pridict.pridictv2.data_preprocess import PESeqProcessor
+from pridict2.pridict.pridictv2.dataset import create_datatensor, MinMaxNormalizer
+from pridict2.pridict.rnn.rnn import RNN_Net
 
-from .model import AnnotEmbeder_InitSeq, AnnotEmbeder_MutSeq, FeatureEmbAttention, \
+from pridict2.pridict.pridictv2.model import AnnotEmbeder_InitSeq, AnnotEmbeder_MutSeq, FeatureEmbAttention, \
                    MLPEmbedder, MLPDecoder, MaskGenerator, MLPDecoderDistribution
-from .hyperparam import RNNHyperparamConfig
-from .dataset import ConcatDataLoaders
-from .data_preprocess import Viz_PESeqs, check_editing_alignment_correctness
+from pridict2.pridict.pridictv2.hyperparam import RNNHyperparamConfig
+from pridict2.pridict.pridictv2.dataset import ConcatDataLoaders
+from pridict2.pridict.pridictv2.data_preprocess import Viz_PESeqs, check_editing_alignment_correctness
 
 class PRIEML_Model:
     def __init__(self, device, wsize=20, normalize='none', include_MFE=False, include_addendumfeat=False,  normalizer_dict=None, fdtype=torch.float32):
@@ -80,10 +80,13 @@ class PRIEML_Model:
 
         # print(norm_colnames)
 
-        tdf, proc_seq_init_df,num_init_cols, proc_seq_mut_df, num_mut_cols = pe_seq_processor.process_init_mut_seqs(df,
-                                                                                                               'wide_initial_target',
-                                                                                                               'wide_mutated_target',
-                                                                                                               align_symbol=2)
+        result = pe_seq_processor.process_init_mut_seqs(df,
+                                                        'wide_initial_target',
+                                                        'wide_mutated_target',
+                                                        align_symbol=2)
+        if result is None:
+            raise ValueError("process_init_mut_seqs returned None")
+        tdf, proc_seq_init_df, num_init_cols, proc_seq_mut_df, num_mut_cols = result
         df = pd.merge(left = df,
                       right = tdf[['seq_id', 
                                    'wide_initial_target_align', 
