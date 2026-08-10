@@ -19,6 +19,16 @@ from pridict2.pridict.pridictv2.hyperparam import RNNHyperparamConfig
 from pridict2.pridict.pridictv2.dataset import ConcatDataLoaders
 from pridict2.pridict.pridictv2.data_preprocess import Viz_PESeqs, check_editing_alignment_correctness
 
+
+def _batch_seq_ids_to_list(b_seqs_id):
+    """Normalize collated seq_id batch (tensor, tuple, list, or scalar) to a list."""
+    if isinstance(b_seqs_id, torch.Tensor):
+        return b_seqs_id.tolist()
+    if isinstance(b_seqs_id, (tuple, list)):
+        return list(b_seqs_id)
+    return [b_seqs_id]
+
+
 class PRIEML_Model:
     def __init__(self, device, wsize=20, normalize='none', include_MFE=False, include_addendumfeat=False,  normalizer_dict=None, fdtype=torch.float32):
         self.device = device
@@ -487,8 +497,9 @@ class PRIEML_Model:
                         pred_score.extend(torch.exp(y_hat_logit).tolist())
 
 
-                    seqs_ids_lst.extend(b_seqs_id.tolist())
-                    dataset_ids_lst.extend([datasets_name_lst[i_data]]*len(b_seqs_id))
+                    batch_seq_ids = _batch_seq_ids_to_list(b_seqs_id)
+                    seqs_ids_lst.extend(batch_seq_ids)
+                    dataset_ids_lst.extend([datasets_name_lst[i_data]] * len(batch_seq_ids))
 
  
         predictions_df = build_predictions_df(seqs_ids_lst, 
