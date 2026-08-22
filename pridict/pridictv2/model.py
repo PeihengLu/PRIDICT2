@@ -1,49 +1,6 @@
 import torch
 from torch import nn
 
-import lightning.pytorch as pl  # type: ignore[reportMissingImports]
-
-
-class PRIDICTLightningModule(pl.LightningModule):
-    """
-    Lightweight Lightning adaptor for PRIDICT model-callables.
-
-    The wrapped `forward_fn` is expected to return logits/predictions compatible
-    with the provided loss function.
-    """
-
-    def __init__(self, forward_fn, loss_fn, *, lr=1e-4, weight_decay=0.0):
-        super().__init__()
-        self.forward_fn = forward_fn
-        self.loss_fn = loss_fn
-        self.lr = float(lr)
-        self.weight_decay = float(weight_decay)
-
-    def training_step(self, batch, _batch_idx):
-        features, target = batch
-        pred = self.forward_fn(features)
-        loss = self.loss_fn(pred, target)
-        self.log("train_loss", loss, on_step=False, on_epoch=True, prog_bar=False)
-        return loss
-
-    def validation_step(self, batch, _batch_idx):
-        features, target = batch
-        pred = self.forward_fn(features)
-        loss = self.loss_fn(pred, target)
-        self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=True)
-        return loss
-
-    def configure_optimizers(self):
-        params = []
-        if hasattr(self.forward_fn, "parameters"):
-            params = list(self.forward_fn.parameters())
-        if not params:
-            raise ValueError(
-                "forward_fn must expose trainable parameters when used with "
-                "PRIDICTLightningModule."
-            )
-        return torch.optim.Adam(params, lr=self.lr, weight_decay=self.weight_decay)
-
 class MaskGenerator():
     def __init__(self):
         pass

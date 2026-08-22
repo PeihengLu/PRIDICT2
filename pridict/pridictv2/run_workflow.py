@@ -472,6 +472,12 @@ def run_cont_pe_RNN_distribution(data_partition, dsettypes, config, options, wrk
     for m, m_name in models:
         m.type(fdtype).to(device)
 
+    if options.get('freezing'):
+        trainable_layernames = options.get('trainable_layernames', ['decoder'])
+        freeze_layers(models, trainable_layernames)
+        models_param = get_trainable_params(models)
+        print('number of parameters of model after freezing:', get_num_trainable_params(models))
+
     if('train' in data_loaders):
         weight_decay = options.get('weight_decay', 1e-4)
         # see paper Cyclical Learning rates for Training Neural Networks for parameters' choice
@@ -1951,15 +1957,11 @@ def train_val_run(
     run_gpu_map,
     statedict_dir=None,
     num_epochs=20,
-    trainer_backend='legacy',
 ):
     dsettypes = ['train', 'validation']
     mconfig, options = config_map
     options['num_epochs'] = num_epochs  # override number of epochs using user specified value
     options['train_flag'] = True
-    options['trainer_backend'] = trainer_backend
-    if trainer_backend == 'pytorch-lightning':
-        print('trainer_backend=pytorch-lightning requested; using compatible vendor training loop.')
 
     for run_num in datatensor_partitions:
         # update options run num to the current run
@@ -1974,12 +1976,14 @@ def train_val_run(
 
         
         if statedict_dir is not None:
-            state_dict_pth = os.path.join(statedict_dir, 
-                                          'train_val', 
+            state_dict_pth = os.path.join(statedict_dir,
+                                          'train_val',
                                           'run_{}'.format(run_num),
                                           'model_statedict')
-            
+
             print('state_dict_pth:', state_dict_pth)
+        else:
+            state_dict_pth = None
 
         if options.get('model_name') == 'PE_RNN_distribution':
             run_cont_pe_RNN_distribution(data_partition, 
@@ -1987,7 +1991,7 @@ def train_val_run(
                                mconfig, 
                                options, 
                                wrk_dir,
-                               state_dict_dir=None,
+                               state_dict_dir=state_dict_pth,
                                to_gpu=True, 
                                gpu_index=run_gpu_map[run_num])
 
