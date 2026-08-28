@@ -163,7 +163,8 @@ class PESeqProcessor:
         # align sequences
         tqdm.pandas(desc='aligning sequences')
         a_df = df.groupby(by=['seq_id']).progress_apply(align_wt_mut_seqs_manual)
-        a_df.reset_index(inplace=True, drop=True)
+        # Keep seq_id from the groupby index (drop=True removed it and broke the merge).
+        a_df.reset_index(inplace=True)
         r_df = pd.merge(left = df,
                         right = a_df[['seq_id', 'wide_initial_target_align', 
                                       'wide_mutated_target_align', 'Correction_Length_effective']],
@@ -402,7 +403,7 @@ class PESeqProcessor:
         baseseq_df.replace(['A', 'C', 'T', 'G', '-', 'N'], [0,1,2,3,4,5], inplace=True)
         
         # replace Na in case of unequal length sequences
-        baseseq_df = baseseq_df.fillna(5)
+        baseseq_df = baseseq_df.fillna(5).astype(np.int64)
         baseseq_letters_df = baseseq_letters_df.fillna('N')
         pbar.update(3)
 
