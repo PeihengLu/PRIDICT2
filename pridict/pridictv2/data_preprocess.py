@@ -41,8 +41,9 @@ def is_contiguous(lst, max_gap_length=1):
 
 def align_wt_mut_seqs_manual(sdf):
 
+    # groupby().apply can pass a one- or many-row DataFrame; always take a Series row.
     if isinstance(sdf, pd.DataFrame):
-        sdf = sdf.squeeze()
+        sdf = sdf.iloc[0]
 
     correction_type = sdf['Correction_Type']
     correction_len = sdf['Correction_Length']
@@ -421,8 +422,14 @@ class PESeqProcessor:
 
 def get_startend_pos(str_rpr):
     """parse string of format [pos1, pos2, etc..]"""
+    if hasattr(str_rpr, "iloc"):
+        str_rpr = str_rpr.iloc[0]
+    str_rpr = str(str_rpr)
     lst = []
     for elm in str_rpr.strip('[]').split(','):
+        elm = elm.strip()
+        if not elm:
+            continue
         lst.append(int(elm))
     return lst
 
