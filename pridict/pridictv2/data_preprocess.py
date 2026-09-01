@@ -44,6 +44,7 @@ def align_wt_mut_seqs_manual(sdf):
     # groupby().apply can pass a one- or many-row DataFrame; always take a Series row.
     if isinstance(sdf, pd.DataFrame):
         sdf = sdf.iloc[0]
+    sdf = sdf.copy()
 
     correction_type = sdf['Correction_Type']
     correction_len = sdf['Correction_Length']
@@ -163,9 +164,20 @@ class PESeqProcessor:
             df[colname] = df[colname].str.upper()
         # align sequences
         tqdm.pandas(desc='aligning sequences')
-        a_df = df.groupby(by=['seq_id']).progress_apply(align_wt_mut_seqs_manual)
-        # Keep seq_id from the groupby index (drop=True removed it and broke the merge).
-        a_df.reset_index(inplace=True)
+        # pandas>=2.2 defaults to include_groups=True, which puts seq_id in both
+        # the groupby index and the apply result columns. Prefer excluding the
+        # grouping column, then promote the index; fall back to the older
+        # "seq_id already in columns" shape via reset_index(drop=True).
+        try:
+            a_df = df.groupby(by=['seq_id']).progress_apply(
+                align_wt_mut_seqs_manual, include_groups=False
+            )
+        except TypeError:
+            a_df = df.groupby(by=['seq_id']).progress_apply(align_wt_mut_seqs_manual)
+        if 'seq_id' in getattr(a_df, 'columns', []):
+            a_df = a_df.reset_index(drop=True)
+        else:
+            a_df = a_df.reset_index()
         r_df = pd.merge(left = df,
                         right = a_df[['seq_id', 'wide_initial_target_align', 
                                       'wide_mutated_target_align', 'Correction_Length_effective']],
