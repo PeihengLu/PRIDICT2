@@ -347,9 +347,15 @@ class PESeqProcessor:
         tdf = self.align_seqs(tdf, init_seq_colname, mut_seq_colname)
         # adds marking start and end of Protos, PBS, RT_init, RT_mut, and EWindows
         tdf = self.mark_annotations(tdf)
-        # get maximum length of sequence
-        # note since we align both sequences, we should have equal max length
-        max_num_cols =  tdf[f'{init_seq_colname}_align'].str.len().max()
+        # Annotation matrices must cover both strands. Vendor align_seqs is
+        # supposed to equalize lengths, but Correction_Length can disagree with
+        # the actual gap; Mut then has more B{i} columns than PBS{i}.
+        max_num_cols = int(
+            max(
+                tdf[f"{init_seq_colname}_align"].str.len().max(),
+                tdf[f"{mut_seq_colname}_align"].str.len().max(),
+            )
+        )
         # adds annotation columns Protos0 .. ProtosMaxNum, PBS0 .. PBSMaxNum, RT_init0 .. RT_initMaxNum, RT_mut0 .. RT_mutMaxNum,
         tdf = self.add_seq_annotations(tdf, max_num_cols, align_symbol)
         return tdf
@@ -369,9 +375,15 @@ class PESeqProcessor:
         tdf = self.align_seqs(tdf, init_seq_colname, mut_seq_colname)
         # adds marking start and end of Protos, PBS, RT_init, RT_mut, and EWindows
         tdf = self.mark_annotations(tdf)
-        # get maximum length of sequence
-        # note since we align both sequences, we should have equal max length
-        max_num_cols =  tdf[f'{init_seq_colname}_align'].str.len().max()
+        # Annotation matrices must cover both strands. Vendor align_seqs is
+        # supposed to equalize lengths, but Correction_Length can disagree with
+        # the actual gap; Mut then has more B{i} columns than PBS{i}.
+        max_num_cols = int(
+            max(
+                tdf[f"{init_seq_colname}_align"].str.len().max(),
+                tdf[f"{mut_seq_colname}_align"].str.len().max(),
+            )
+        )
         # adds annotation columns Protos0 .. ProtosMaxNum, PBS0 .. PBSMaxNum, RT_init0 .. RT_initMaxNum, RT_mut0 .. RT_mutMaxNum,
         tdf = self.add_seq_annotations(tdf, max_num_cols, align_symbol)
         proc_init_df, proc_mut_df = self.split_matrices(tdf, max_num_cols)

@@ -217,6 +217,19 @@ def get_seqlevel_featnames(suffix='_norm'):
                    norm_colnames[1:] + ['original_base_mt_nan', 'edited_base_mt_nan']
     return seqfeat_cols
 
+def _max_indexed_col(df, prefix: str) -> int:
+    """Largest ``{prefix}{i}`` column index, or -1 if none exist."""
+    best = -1
+    width = len(prefix)
+    for col in df.columns:
+        if not isinstance(col, str) or not col.startswith(prefix):
+            continue
+        rest = col[width:]
+        if rest.isdigit():
+            best = max(best, int(rest))
+    return best
+
+
 def create_datatensor(data_df, proc_seq_init_df, num_init_cols,  proc_seq_mut_df, num_mut_cols, cont_cols, window=10, y_ref=[]):
     """create a instance of DataTensor from processeed/cleaned dataframe
     
@@ -242,7 +255,16 @@ def create_datatensor(data_df, proc_seq_init_df, num_init_cols,  proc_seq_mut_df
     # to put assert statment
     assert ((end_init_seqs - start_init_seqs) <= upper_thr).all(), f'Difference between end and start seuqnce should be at most {upper_thr} bp'
     end_init_colindx = end_init_seqs.max()
-    upper_init_thr = np.min([st_init_colindx+upper_thr, num_init_cols-1, end_init_colindx + window]) # -1 to compensate for not including end value
+    avail_init = min(
+        num_init_cols - 1,
+        _max_indexed_col(proc_seq_init_df, "B"),
+        _max_indexed_col(proc_seq_init_df, "PBS"),
+        _max_indexed_col(proc_seq_init_df, "Protos"),
+        _max_indexed_col(proc_seq_init_df, "RT_init"),
+    )
+    if avail_init < 0:
+        avail_init = num_init_cols - 1
+    upper_init_thr = np.min([st_init_colindx+upper_thr, avail_init, end_init_colindx + window]) # -1 to compensate for not including end value
     end_init_seqs = (end_init_seqs + window).clip(lower=None, upper=upper_init_thr)
     end_init_colindx = end_init_seqs.max()
     # print('updated end_init_seqs:\n', end_init_seqs.value_counts())
@@ -289,7 +311,15 @@ def create_datatensor(data_df, proc_seq_init_df, num_init_cols,  proc_seq_mut_df
     assert ((end_mut_seqs - start_mut_seqs) <= upper_thr).all(), f'Difference between end and start seuqnce should be at most {upper_thr} bp'
 
     end_mut_colindx = end_mut_seqs.max()
-    upper_mut_thr = np.min([st_mut_colindx+upper_thr, num_mut_cols-1, end_mut_colindx + window])
+    avail_mut = min(
+        num_mut_cols - 1,
+        _max_indexed_col(proc_seq_mut_df, "B"),
+        _max_indexed_col(proc_seq_mut_df, "PBS"),
+        _max_indexed_col(proc_seq_mut_df, "RT_mut"),
+    )
+    if avail_mut < 0:
+        avail_mut = num_mut_cols - 1
+    upper_mut_thr = np.min([st_mut_colindx+upper_thr, avail_mut, end_mut_colindx + window])
     end_mut_seqs = (end_mut_seqs + window).clip(lower=None, upper=upper_mut_thr)
     end_mut_colindx = end_mut_seqs.max()
     # print('updated end_mut_seqs:\n', end_mut_seqs.value_counts())
